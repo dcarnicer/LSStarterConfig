@@ -79,6 +79,22 @@ echo ""
 # ----------------------------------------------------------
 # 2. Org selector
 # ----------------------------------------------------------
+
+login_new_org() {
+  echo ""
+  echo "  [1] Production (login.salesforce.com)"
+  echo "  [2] Sandbox    (test.salesforce.com)"
+  echo ""
+  read -rp "  Environment: " ENV_CHOICE
+  case "$ENV_CHOICE" in
+    1) sf org login web --instance-url https://login.salesforce.com --set-default ;;
+    2) sf org login web --instance-url https://test.salesforce.com --set-default ;;
+    *) echo -e "${RED}Invalid choice.${NC}"; exit 1 ;;
+  esac
+  ORG_USER=$(sf org display --json 2>/dev/null | jq -r '.result.username // "unknown"')
+  echo -e "  ${GREEN}✓ Authenticated as: ${ORG_USER}${NC}"
+}
+
 echo "Loading authenticated Salesforce orgs..."
 
 ORG_LIST=$(sf org list --json 2>/dev/null | jq -r '
@@ -97,9 +113,7 @@ if [ -z "$ORG_LIST" ]; then
   read -rp "Choice: " CHOICE
   case "$CHOICE" in
     1)
-      sf org login web --set-default
-      ORG_USER=$(sf org display --json 2>/dev/null | jq -r '.result.username // "unknown"')
-      echo -e "  ${GREEN}✓ Authenticated as: ${ORG_USER}${NC}"
+      login_new_org
       ;;
     *)
       echo "Exiting."
@@ -125,9 +139,7 @@ else
     echo "Exiting."
     exit 0
   elif [ "$CHOICE" = "$((${#ORGS[@]}+1))" ]; then
-    sf org login web --set-default
-    ORG_USER=$(sf org display --json 2>/dev/null | jq -r '.result.username // "unknown"')
-    echo -e "  ${GREEN}✓ Authenticated as: ${ORG_USER}${NC}"
+    login_new_org
   elif [[ "$CHOICE" =~ ^[0-9]+$ ]] && [ "$CHOICE" -ge 1 ] && [ "$CHOICE" -le "${#ORGS[@]}" ]; then
     SELECTED_USER=$(echo "${ORGS[$((CHOICE-1))]}" | awk '{print $1}')
     sf config set target-org="$SELECTED_USER" --global 1>/dev/null
